@@ -4,19 +4,11 @@ const _ani = document.getElementById('animation-1');
 
 const minInterval = 5; // Refresh animation every x minutes
 
-
-function formatFileName(filename) {
-  filename = filename.replace(/\.[^/.]+$/, ""); // removes .mp4, .wav, .mp3, etc
-  filename = filename.replace(/([\\])/g, "\\\\"); // keeps backslashes in final output
-  filename = filename.replace(/([`])/g, "\'"); // replaces any backquotes with a single quote
-  filename = filename.replace(/(["'])/g, "\\$1"); // keeps any single or double quote in final output
-  return filename;
-}
 function formatLines(filename) {
   let line1;
   let line2;
   if(filename.includes('_')) {
-    let title = formatFileName(filename).split('_');
+    let title = filename.split('_');
     if(title.length == 4) {
       line1 = `${title[2].substring(0, 33)} by ${title[1].substring(0, 33)}`; // Title by Group
       line1 = `${line1.substring(0,70)}`;
@@ -34,11 +26,11 @@ function formatLines(filename) {
       line1 = `${title.slice(1).join(' - ').substring(0, 70)}`;
       line2 = `${title.shift().substring(0,70)}`; // Year
     } else {
-      line1 = `${formatFileName(filename).substring(0, 70)}`;
+      line1 = `${filename.substring(0, 70)}`;
       line2 = ``;
     }
   } else {
-    line1 = `${formatFileName(filename).substring(0, 70)}`;
+    line1 = `${filename.substring(0, 70)}`;
     line2 = ``;
   }
   return {
@@ -49,7 +41,7 @@ function formatLines(filename) {
 function durationToSeconds(duration) {
   if(!duration.includes(":")) {
     console.log(`Error: duration isn't proper format.`);
-    return undefined;
+    return 0;
   } else {
     const arr = duration.split(":");
     if(arr.length == 3) { // 01:31:55
@@ -60,13 +52,13 @@ function durationToSeconds(duration) {
       return seconds;
     } else {
       console.log(`Error: duration either too long or not in proper format.`)
-      return undefined;
+      return 0;
     }
   }
 }
 
 function connect() {
-  const ws = new WebSocket('ws://localhost:3124');
+  const ws = new WebSocket(`ws://localhost:3124`);
 
   ws.addEventListener('open', () => {
     console.log('We are connected.');
@@ -93,18 +85,26 @@ function connect() {
     _ani.parentNode.replaceChild(_ani, _ani); // Replaces current element with new updated element
   }
 
-  ws.addEventListener('message', async function(event) {
-    try {
-      // Clears previous timers on new messages (videos)
-      await clearAllTimeouts();
-      timers = [];
+  function heartbeat(ws) {
+    clearTimeout(ws.pingTimeout);
+    ws.pingTimeout = setTimeout(() => {
+      ws.close(1000, 'Terminated');
+    }, 30000 + 1000);
+  }
 
-      const data = JSON.parse(event.data);
-      if(data.data == 'NOT_PLAYING') {
-        console.log('VLC is not playing anything at the moment!');
-      } else {
-        let filename = data.data.filename;
-        console.log(filename);
+  ws.addEventListener('message', async function(event) {
+    const data = JSON.parse(event.data);
+    if(data.event === 'ping') {
+      heartbeat(ws);
+      ws.send(JSON.stringify('pong'));
+    } else if(data.event === 'message') {
+      try {
+        // Clears previous timers on new messages (videos)
+        await clearAllTimeouts();
+        timers = [];
+
+        let filename = data.data.formatted_name;
+        console.log(`Currently playing: ${filename}`);
 
         let duration = data.data.duration;
         duration = durationToSeconds(duration); // in seconds
@@ -113,30 +113,27 @@ function connect() {
         _line1.innerText = lines.line1;
         _line2.innerText = lines.line2;
 
-        if(duration == undefined) {
-          console.log(`Error: duration isn't proper format.`);
-        } else {
-          let times = Math.floor((duration / 60) / minInterval); // How many times to run every x interval
-          if(times == 0) {
-            refreshElement();
-          } else if(times > 0) {
-            for(let i = 0; i <= times - 1; i++) {
-              await addTimeouts(i);
-            }
+        // How many times to run every x interval
+        let times = Math.floor((duration / 60) / minInterval);
+        if(times <= 1) {
+          refreshElement();
+        } else if(times > 1) {
+          for(let i = 0; i <= times - 1; i++) {
+            await addTimeouts(i);
           }
         }
-
+      } catch(err) {
+        console.log('Something went wrong: ', err);
       }
-    } catch(err) {
-      console.log('Something went wrong: ', err);
     }
   });
 
   ws.addEventListener('close', function(event) {
+    clearTimeout(ws.pingTimeout);
     console.log('WS error: ', event);
-    console.log(`Disconnected from WebSocket.. let's reconnect`);
+    console.log(`Disconnected from WebSocket.. reconnecting..`);
     setTimeout(function () {
-      connect();
+      connect(); // Reconnect
     }, 10000);
   });
 }
