@@ -40,7 +40,7 @@ function formatLines(filename) {
 }
 function durationToSeconds(duration) {
   if(!duration.includes(":")) {
-    console.log(`Error: duration isn't proper format.`);
+    console.log(`\x1b[36m%s\x1b[0m`, `[LOWER THIRD]`, `Error: duration isn't proper format.`);
     return 0;
   } else {
     const arr = duration.split(":");
@@ -51,7 +51,7 @@ function durationToSeconds(duration) {
       const seconds = arr[0]*60+(+arr[1]);
       return seconds;
     } else {
-      console.log(`Error: duration either too long or not in proper format.`)
+      console.log(`\x1b[36m%s\x1b[0m`, `[LOWER THIRD]`, `Error: duration either too long or not in proper format.`)
       return 0;
     }
   }
@@ -61,7 +61,8 @@ function connect() {
   const ws = new WebSocket(`ws://localhost:3124`);
 
   ws.addEventListener('open', () => {
-    console.log('We are connected.');
+    console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, 'We are connected.');
+    ws.send(JSON.stringify({ "event": "init" }));
   });
 
   let timers = [];
@@ -96,7 +97,7 @@ function connect() {
     const data = JSON.parse(event.data);
     if(data.event === 'ping') {
       heartbeat(ws);
-      ws.send(JSON.stringify('pong'));
+      ws.send(JSON.stringify({ "event": "pong" }));
     } else if(data.event === 'message') {
       try {
         // Clears previous timers on new messages (videos)
@@ -104,7 +105,7 @@ function connect() {
         timers = [];
 
         let filename = data.data.formatted_name;
-        console.log(`Currently playing: ${filename}`);
+        console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, filename);
 
         let duration = data.data.duration;
         duration = durationToSeconds(duration); // in seconds
@@ -115,6 +116,7 @@ function connect() {
 
         // How many times to run every x interval
         let times = Math.floor((duration / 60) / minInterval);
+
         if(times <= 1) {
           refreshElement();
         } else if(times > 1) {
@@ -122,16 +124,36 @@ function connect() {
             await addTimeouts(i);
           }
         }
+
       } catch(err) {
-        console.log('Something went wrong: ', err);
+        console.log(`\x1b[36m%s\x1b[0m`, `[LOWER THIRD]`, 'Something went wrong: ', err);
       }
+    } else if(data.event === 'titles') {
+      // Clears previous timers on new messages (videos)
+      await clearAllTimeouts();
+      timers = [];
+
+      console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, `LIVE: ${data.data.name}`);
+
+      _line1.innerText = data.data.line1;
+      _line2.innerText = data.data.line2;
+
+      // run titles every 5 mins unless VLC playlist starts
+      function runRefreshEveryFive() {
+        refreshElement();
+        let namedTimer = setTimeout(() => {
+          runRefreshEveryFive();
+        }, minInterval * 60 * 1000);
+        timers.push(namedTimer);
+      }
+      runRefreshEveryFive();
+
     }
   });
 
   ws.addEventListener('close', function(event) {
     clearTimeout(ws.pingTimeout);
-    console.log('WS error: ', event);
-    console.log(`Disconnected from WebSocket.. reconnecting..`);
+    console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Error:`, event, `Disconnected from WebSocket.. reconnecting..`);
     setTimeout(function () {
       connect(); // Reconnect
     }, 10000);
