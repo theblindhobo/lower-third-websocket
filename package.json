@@ -1,7 +1,7 @@
 {
   "name": "kitsch-websocket",
   "version": "1.0.0",
-  "description": "",
+  "description": "*Parses metadata from log file created by VLC extension, then updates Lower Third and automatically displays on OBS Browser Source*",
   "main": "websocket.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

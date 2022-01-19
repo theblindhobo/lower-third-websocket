@@ -1,8 +1,17 @@
+const _slash = document.getElementById('slash');
 const _line1 = document.getElementById('line1');
 const _line2 = document.getElementById('line2');
 const _ani = document.getElementById('animation-1');
 
+const slash = '!';
+
 const minInterval = 5; // Refresh animation every x minutes
+const titleDelayInSecs = 5; // The delay before LIVE, VOD, DISPLAY titles appear
+const websocketReconnectDelayInSecs = 10; // The delay before WebSocket attempts to reconnect
+
+const removeCooldownTimeoutInSecs = 20; // Removes the cooldown set when VOD, DISPLAY titles appear
+                                        // Because usually VLC will send a new message when file changes
+
 
 function formatLines(filename) {
   let line1;
@@ -57,12 +66,22 @@ function durationToSeconds(duration) {
   }
 }
 
+let prevObj; // stores every new incoming data object
+
+
 function connect() {
   const ws = new WebSocket(`ws://localhost:3124`);
 
   ws.addEventListener('open', () => {
     console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, 'We are connected.');
-    ws.send(JSON.stringify({ "event": "init" }));
+    if(prevObj !== undefined) {
+      prevObj.prevEvent = prevObj.event;
+      prevObj.event = 'init';
+      ws.send(JSON.stringify(prevObj));
+    } else {
+      ws.send(JSON.stringify({ "event": "init" }));
+    }
+
   });
 
   let timers = [];
@@ -93,12 +112,20 @@ function connect() {
     }, 30000 + 1000);
   }
 
+
   ws.addEventListener('message', async function(event) {
     const data = JSON.parse(event.data);
+    if(data.event !== 'ping') prevObj = data; // stores every new incoming data object
+
+    if(data.action === 'VOD' || data.action === 'LIVE' || data.action === 'DISPLAY') {
+      // previously had put cooldown here, but is handled within websocket.js
+    }
+
     if(data.event === 'ping') {
       heartbeat(ws);
       ws.send(JSON.stringify({ "event": "pong" }));
-    } else if(data.event === 'message') {
+    }
+    if(data.event === 'message') {
       try {
         // Clears previous timers on new messages (videos)
         await clearAllTimeouts();
@@ -111,6 +138,7 @@ function connect() {
         duration = durationToSeconds(duration); // in seconds
 
         var lines = formatLines(filename);
+        _slash.innerText = slash;
         _line1.innerText = lines.line1;
         _line2.innerText = lines.line2;
 
@@ -128,25 +156,31 @@ function connect() {
       } catch(err) {
         console.log(`\x1b[36m%s\x1b[0m`, `[LOWER THIRD]`, 'Something went wrong: ', err);
       }
-    } else if(data.event === 'titles') {
+    }
+    if(data.event === 'titles') {
       // Clears previous timers on new messages (videos)
       await clearAllTimeouts();
       timers = [];
 
-      console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, `LIVE: ${data.data.name}`);
+      console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, `${data.action}: ${data.data.name}`);
 
-      _line1.innerText = data.data.line1;
-      _line2.innerText = data.data.line2;
+      // update titles in 5s
+      setTimeout(() => {
+        _slash.innerText = slash;
+        _line1.innerText = data.data.line1;
+        _line2.innerText = data.data.line2;
 
-      // run titles every 5 mins unless VLC playlist starts
-      function runRefreshEveryFive() {
-        refreshElement();
-        let namedTimer = setTimeout(() => {
-          runRefreshEveryFive();
-        }, minInterval * 60 * 1000);
-        timers.push(namedTimer);
-      }
-      runRefreshEveryFive();
+        // run titles every 5 mins unless VLC playlist starts
+        function runRefreshEveryFive() {
+          refreshElement();
+          let namedTimer = setTimeout(() => {
+            runRefreshEveryFive();
+          }, minInterval * 60 * 1000);
+          timers.push(namedTimer);
+        }
+        runRefreshEveryFive();
+      }, titleDelayInSecs * 1000);
+
 
     }
   });
@@ -156,7 +190,7 @@ function connect() {
     console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Error:`, event, `Disconnected from WebSocket.. reconnecting..`);
     setTimeout(function () {
       connect(); // Reconnect
-    }, 10000);
+    }, websocketReconnectDelayInSecs * 1000);
   });
 }
 
