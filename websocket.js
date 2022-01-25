@@ -109,12 +109,12 @@ wss.on('connection', ws => {
         let terminalName;
         switch (data.data.action) {
           case 'LIVE':
-            terminalAction = `${data.data.action} - ${data.data.uri}:`;
-            terminalName = `${data.data.name}\n\t\tLine1: ${data.data.line1} \n\t\tLine2: ${data.data.line2}\n`
+            terminalAction = `${data.data.action}: ${data.data.source}`;
+            terminalName = `\n\t\tLine1: ${data.data.line1} \n\t\tLine2: ${data.data.line2}\n`
             break;
           case 'VOD':
-            terminalAction = `${data.data.action}:`;
-            terminalName = `${data.data.name}\n\t\tLine1: ${data.data.line1} \n\t\tLine2: ${data.data.line2}\n`
+            terminalAction = `${data.data.action}: ${data.data.source}`;
+            terminalName = `\n\t\tLine1: ${data.data.line1} \n\t\tLine2: ${data.data.line2}\n`
             break;
           case 'DISPLAY':
             terminalAction = `QUICK ${data.data.action}`;
