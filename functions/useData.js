@@ -1,10 +1,10 @@
 const { formatMetadata } = require('./formatMetadata.js');
 
 module.exports = {
-  useData: (data, ws) => {
+  useData: async (data, ws) => {
     if(ws.readyState == 1) {
       if(data != 'NOT_PLAYING') {
-        let metadata = formatMetadata(data); // formats to JSON
+        let metadata = await formatMetadata(data); // formats to JSON
         console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, metadata.filename);
         let vlcObj = {
           "event": "message",

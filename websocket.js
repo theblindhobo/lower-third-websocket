@@ -57,21 +57,25 @@ wss.on('connection', ws => {
             if(err) {
               console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, err);
             } else  {
-              if(prevData != data) {
-                prevData = data;
-                // check cooldown
-                if(cooldown == false) {
-                  // send data to websocket
-                  let vlcObj = useData(data, lowerThirdWebsocket);
-                  if(vlcObj !== undefined) {
-                    prevObj = vlcObj; // stores every new outgoing data object
+              if(data != undefined && (data.substring(0,3) == '{al' || data.substring(0,3) == 'NOT')) { // checks to see if VLC Log has metadata or NOT_PLAYING, otherwise ignore
+                if(prevData != data) {
+                  prevData = data;
+                  // check cooldown
+                  if(cooldown == false) {
+                    // send data to websocket
+                    let vlcObj = useData(data, lowerThirdWebsocket);
+                    if(vlcObj !== undefined) {
+                      prevObj = vlcObj; // stores every new outgoing data object
+                    }
+                  } else {
+                    console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `VLC titles are currently on a cooldown to let other titles run.`);
+                    console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `If this is an error, please contact theblindhobo.`);
                   }
                 } else {
-                  console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `VLC titles are currently on a cooldown to let other titles run.`);
-                  console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `If this is an error, please contact theblindhobo.`);
+                  // same data, ignore
                 }
               } else {
-                // same data, ignore
+                console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `Error caught: Data is undefined.`);
               }
             }
           });
