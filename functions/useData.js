@@ -4,6 +4,7 @@ const { formatMetadata } = require('./formatMetadata.js');
 const dotenv = require('dotenv');
 dotenv.config();
 const title1 = process.env.TITLE1;
+const title2 = process.env.TITLE2;
 
 function nowDemoscene() {
   const d = new Date(Date.now()).toLocaleDateString('en-US',
@@ -27,6 +28,7 @@ module.exports = {
         try{
           // write NOW: Demoscene to title1.txt file in Scheduler app
           fs.writeFileSync(title1, nowDemoscene());
+          fs.writeFileSync(title2, '');
         } catch(err) {
           console.log(`\x1b[33m%s\x1b[0m`, `[WRITEFILE]`, `Could not write to title1.txt file.`);
         }
