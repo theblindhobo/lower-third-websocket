@@ -15,7 +15,7 @@ function nowDemoscene() {
       day: 'numeric'
     }
   ).replace(',','').split(' ');
-  let dT = `${d[1]} ${d[0]} ${d[2]}`;
+  let dT = `NOW: Demoscene | ${d[1]} ${d[0]} ${d[2]}`;
   return dT;
 }
 
@@ -27,8 +27,8 @@ module.exports = {
         console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, metadata.filename);
         try{
           // write NOW: Demoscene to title1.txt file in Scheduler app
-          fs.writeFileSync(title1, `NOW: Demoscene`);
-          fs.writeFileSync(title2, nowDemoscene());
+          fs.writeFileSync(title1, nowDemoscene());
+          fs.writeFileSync(title2, ' ');
         } catch(err) {
           console.log(`\x1b[33m%s\x1b[0m`, `[WRITEFILE]`, `Could not write to title1.txt file.`);
         }
