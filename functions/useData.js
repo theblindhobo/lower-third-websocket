@@ -30,7 +30,7 @@ module.exports = {
           fs.writeFileSync(title1, nowDemoscene());
           fs.writeFileSync(title2, ' ');
         } catch(err) {
-          console.log(`\x1b[33m%s\x1b[0m`, `[WRITEFILE]`, `Could not write to title1.txt file.`);
+          console.log(`\x1b[33m%s\x1b[0m`, `[TITLES]`, `Could not write to title text file.`);
         }
         let vlcObj = {
           "event": "message",
