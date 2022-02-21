@@ -3,6 +3,8 @@ const _line1 = document.getElementById('line1');
 const _line2 = document.getElementById('line2');
 const _ani = document.getElementById('animation-1');
 
+const PORT_NUMBER = '3124';
+
 const slash = '!';
 
 const minInterval = 5; // Refresh animation every x minutes
@@ -70,7 +72,7 @@ let prevObj; // stores every new incoming data object
 
 
 function connect() {
-  const ws = new WebSocket(`ws://localhost:3124`);
+  const ws = new WebSocket(`ws://localhost:${PORT_NUMBER}`);
 
   ws.addEventListener('open', () => {
     console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, 'We are connected.');

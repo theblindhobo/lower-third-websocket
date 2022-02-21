@@ -1,7 +1,13 @@
 var fs = require('fs');
+const logger = require('./functions/logger/logger.js');
 const WebSocket = require('ws');
-var wss = new WebSocket.Server({ port: 3124 });
-console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Server has been initiated at ws://localhost:3124`);
+
+const PORT_NUMBER = '3124';
+
+var wss = new WebSocket.Server({ port: PORT_NUMBER });
+
+logger.log(`[WEBSOCKET]\tServer has been initiated at ws://localhost:${PORT_NUMBER}`);
+console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Server has been initiated at ws://localhost:${PORT_NUMBER}`);
 
 var vlcMetadata = process.env.APPDATA + '\\vlc\\np_metadata_full.txt';
 
@@ -23,6 +29,7 @@ let watcherID = 0;
 
 
 wss.on('connection', ws => {
+  logger.log(`[WEBSOCKET]\tNew client connected!`);
   console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `New client connected!`);
   ws.isAlive = true;
 
@@ -55,6 +62,7 @@ wss.on('connection', ws => {
         if(curr.mtime.getTime() != prev.mtime.getTime()) {
           fs.readFile(vlcMetadata, 'utf8', function(err, data) {
             if(err) {
+              logger.log(`[READFILE]\tError: ${err}`);
               console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, err);
             } else  {
               if(data != undefined && (data.substring(0,3) == '{al' || data.substring(0,3) == 'NOT')) { // checks to see if VLC Log has metadata or NOT_PLAYING, otherwise ignore
@@ -68,6 +76,8 @@ wss.on('connection', ws => {
                       prevObj = vlcObj; // stores every new outgoing data object
                     }
                   } else {
+                    logger.log(`[READFILE]\tVLC titles are currently on a cooldown to let other titles run.`);
+                    logger.log(`[READFILE]\tIf this is an error, please contact theblindhobo.`);
                     console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `VLC titles are currently on a cooldown to let other titles run.`);
                     console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `If this is an error, please contact theblindhobo.`);
                   }
@@ -75,6 +85,7 @@ wss.on('connection', ws => {
                   // same data, ignore
                 }
               } else {
+                logger.log(`[READFILE]\tError caught: Data is undefined.`);
                 console.log(`\x1b[33m%s\x1b[0m`, `[READFILE]`, `Error caught: Data is undefined.`);
               }
             }
@@ -129,10 +140,12 @@ wss.on('connection', ws => {
         }
 
         if(lowerThirdWebsocket !== undefined && lowerThirdWebsocket.readyState == 1) {
+          logger.log(`[LOWER THIRD]\tNow playing: ${terminalAction} ${terminalName}`);
           console.log(`\x1b[36m%s\x1b[32m%s\x1b[0m`, `[LOWER THIRD]`, ` Now playing:`, `${terminalAction} ${terminalName}`);
           prevObj = titleObj;
           lowerThirdWebsocket.send(JSON.stringify(titleObj));
         } else {
+          logger.log(`[WEBSOCKET]\tNOTICE: Connection to Browser is not open. WebSocket stored title.\n\t\t${terminalAction} ${terminalName}`);
           console.log(`\x1b[35m%s\x1b[33m%s\x1b[0m`, `[WEBSOCKET]`, ` NOTICE: Connection to Browser is not open. WebSocket stored title.`, `\n\t\t${terminalAction} ${terminalName}`);
           prevObj = titleObj;
         }
@@ -142,6 +155,7 @@ wss.on('connection', ws => {
 
   ws.on('close', ws => {
     ws.isAlive = false;
+    logger.log(`[WEBSOCKET]\tClient has disconnected: ${ws}`);
     console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Client has disconnected: `, ws);
   });
 });
@@ -149,6 +163,7 @@ wss.on('connection', ws => {
 const interval = setInterval(function ping() {
   wss.clients.forEach(function (ws) {
     if (ws.isAlive === false) {
+      logger.log(`[WEBSOCKET]\tConnection died: ${ws}`);
       console.log(`\x1b[35m%s\x1b[0m`, `[WEBSOCKET]`, `Connection died: `, ws);
       return ws.terminate();
     }
